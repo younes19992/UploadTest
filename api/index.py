@@ -174,36 +174,23 @@ def upload_rbxl(cookies, gm):
         except Exception as e:
             print(f"Error: {e}")
     return game_urls
-def clear_output_file(file_path):
-    with open(file_path, "w") as file:
-        file.write("")  # Clears the content of the file
+
 @app.route('/upload', methods=['POST'])
 def upload():
-    game_name = generate_logic_game_name()
+    game_namo = generate_logic_game_name()
     uploaded_files = request.files.getlist("files[]")
-    cookies_file = request.files.get('cookies')
-    if cookies_file is None:
+    cookies = request.files['cookies']
+    if 'cookies' not in request.files:
         return jsonify({"message": "No cookies file provided"}), 400
-    cookies_data = cookies_file.read().decode("utf-8").strip()
+    cookies_data = cookies.read().decode("utf-8").strip()
     if not cookies_data:
         return jsonify({"message": "Empty cookies file"}), 400
     cookies_list = cookies_data.split("\n")
-    game_urls = set()  # Using a set to store unique game URLs
-    for cookie in cookies_list:
-        game_url = update_roblox_game(cookie, game_name)
-        if game_url:
-            game_urls.add(game_url)  # Add game URL to the set
-    # Read game URLs from the file
-    game_urls_file = "games.txt"
-    try:
-        clear_output_file(game_urls_file)  # Clear the output file before writing new URLs
-        with open(game_urls_file, "a") as file:
-            for game_url in game_urls:
-                file.write(game_url + "\n")  # Write unique game URLs back to the file
-        return jsonify({"message": "Upload successful", "game_urls": list(game_urls)})
-    except OSError as e:
-        return jsonify({"message": f"Error clearing output file: {str(e)}"}), 500
-
+    game_urls = upload_rbxl(cookies_list, game_namo)
+    with open("game_urls.txt", "w") as file:
+        for url in game_urls:
+            file.write(url + "\n")
+    return jsonify({"message": "Upload successful", "game_urls": game_urls})
 
 if __name__ == '__main__':
     app.run(debug=True)
