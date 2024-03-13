@@ -195,11 +195,14 @@ def upload():
             game_urls.add(game_url)  # Add game URL to the set
     # Read game URLs from the file
     game_urls_file = "games.txt"
-    clear_output_file(game_urls_file)  # Clear the output file before writing new URLs
-    with open(game_urls_file, "a") as file:
-        for game_url in game_urls:
-            file.write(game_url + "\n")  # Write unique game URLs back to the file
-    return jsonify({"message": "Upload successful", "game_urls": list(game_urls)})
+    try:
+        clear_output_file(game_urls_file)  # Clear the output file before writing new URLs
+        with open(game_urls_file, "a") as file:
+            for game_url in game_urls:
+                file.write(game_url + "\n")  # Write unique game URLs back to the file
+        return jsonify({"message": "Upload successful", "game_urls": list(game_urls)})
+    except OSError as e:
+        return jsonify({"message": f"Error clearing output file: {str(e)}"}), 500
 
 
 if __name__ == '__main__':
