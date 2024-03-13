@@ -1,5 +1,4 @@
-flask
-requests
-json
-bs4
-urllib3
+flask==3.0.2
+requests==2.31.0
+bs4==0.0.2
+urllib3==2.2.1
