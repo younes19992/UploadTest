@@ -11,9 +11,13 @@ def handle_post():
     global saved_post, last_post_time
 
     if request.method == 'POST':
-        saved_post = request.get_json()
-        last_post_time = time.time()  # Record the time of the last POST request
-        return jsonify({'message': 'Post saved successfully'}), 200
+        data = request.get_json()
+        if data:
+            saved_post = data
+            last_post_time = time.time()  # Record the time of the last POST request
+            return jsonify({'message': 'Post saved successfully'}), 200
+        else:
+            return jsonify({'error': 'Invalid JSON data'}), 400
     elif request.method == 'GET':
         if saved_post is None:
             return jsonify({'error': 'No post saved yet'}), 404
