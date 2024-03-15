@@ -10,14 +10,10 @@ last_post_time = None
 def handle_post():
     global saved_post, last_post_time
 
-    if request.method == 'POST':
-        data = request.get_json()
-        if data:
-            saved_post = data
-            last_post_time = time.time()  # Record the time of the last POST request
-            return jsonify({'message': 'Post saved successfully'}), 200
-        else:
-            return jsonify({'error': 'Invalid JSON data'}), 400
+    if request.method == 'POST' and saved_post is None:
+        saved_post = request.get_json()
+        last_post_time = time.time()  # Record the time of the last POST request
+        return jsonify({'message': 'Post saved successfully'}), 200
     elif request.method == 'GET':
         if saved_post is None:
             return jsonify({'error': 'No post saved yet'}), 404
@@ -29,9 +25,6 @@ def handle_post():
             old = saved_post
             saved_post = None
             return jsonify(old), 200
-
-    # Return a 405 Method Not Allowed error for unsupported methods
-    return jsonify({'error': 'Method Not Allowed'}), 405
 
 if __name__ == '__main__':
     app.run(debug=True)
