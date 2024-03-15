@@ -10,7 +10,7 @@ last_post_time = None
 def handle_post():
     global saved_post, last_post_time
 
-    if request.method == 'POST' and saved_post is None:
+    if request.method == 'POST':
         saved_post = request.get_json()
         last_post_time = time.time()  # Record the time of the last POST request
         return jsonify({'message': 'Post saved successfully'}), 200
@@ -25,6 +25,9 @@ def handle_post():
             old = saved_post
             saved_post = None
             return jsonify(old), 200
+
+    # Return a 405 Method Not Allowed error for unsupported methods
+    return jsonify({'error': 'Method Not Allowed'}), 405
 
 if __name__ == '__main__':
     app.run(debug=True)
