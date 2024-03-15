@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 import time
 
 app = Flask(__name__)
@@ -6,12 +6,14 @@ app = Flask(__name__)
 saved_post = None
 last_post_time = None
 
-@app.route('/', methods=['POST'])
-def handle_post():
+def save_post():
     global saved_post, last_post_time
-
     saved_post = request.get_json()
     last_post_time = time.time()  # Record the time of the last POST request
+
+@app.route('/', methods=['POST'])
+def handle_post():
+    save_post()
     return jsonify({'message': 'Post saved successfully'}), 200
 
 @app.route('/get_post', methods=['GET'])
