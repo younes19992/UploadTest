@@ -26,8 +26,5 @@ def handle_post():
             saved_post = None
             return jsonify(old), 200
 
-    # Return a 405 Method Not Allowed error for unsupported methods
-    return jsonify({'error': 'Method Not Allowed'}), 405
-
 if __name__ == '__main__':
     app.run(debug=True)
