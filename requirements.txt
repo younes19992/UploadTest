@@ -3,4 +3,4 @@ requests
 bs4
 urllib3
 jsonify
-psycopg2
+psycopg2-binary
