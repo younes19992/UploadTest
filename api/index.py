@@ -1,22 +1,29 @@
 from flask import Flask, jsonify, request
-import sqlite3
-import time
+import os
+import psycopg2
 
 app = Flask(__name__)
 
-# Connect to SQLite database
-conn = sqlite3.connect('registrations.db')
-cursor = conn.cursor()
+# Get PostgreSQL connection parameters from environment variables
+postgres_url = os.getenv('POSTGRES_URL')
+postgres_user = os.getenv('POSTGRES_USER')
+postgres_password = os.getenv('POSTGRES_PASSWORD')
+postgres_host = os.getenv('POSTGRES_HOST')
+postgres_database = os.getenv('POSTGRES_DATABASE')
 
-# Create a table for registrations if it doesn't exist
-cursor.execute('''CREATE TABLE IF NOT EXISTS registrations
-                (id INTEGER PRIMARY KEY AUTOINCREMENT, command TEXT, timestamp INTEGER)''')
-conn.commit()
-
-def save_registration_command(command):
-    timestamp = int(time.time())  # Get current timestamp
-    cursor.execute('''INSERT INTO registrations (command, timestamp) VALUES (?, ?)''', (command, timestamp))
-    conn.commit()
+def connect_to_postgresql():
+    try:
+        connection = psycopg2.connect(
+            user=postgres_user,
+            password=postgres_password,
+            host=postgres_host,
+            port='5432',  # Assuming the default PostgreSQL port
+            database=postgres_database,
+        )
+        return connection
+    except psycopg2.Error as error:
+        print("Error while connecting to PostgreSQL:", error)
+        return None
 
 @app.route('/', methods=['POST'])
 def handle_post():
@@ -24,25 +31,31 @@ def handle_post():
     command = data.get('command')
 
     if command:
-        save_registration_command(command)
-        return jsonify({'message': 'Registration command saved successfully'}), 200
+        # Connect to PostgreSQL database
+        connection = connect_to_postgresql()
+        if connection:
+            try:
+                cursor = connection.cursor()
+
+                # Example: Execute SQL command
+                cursor.execute("INSERT INTO your_table (command) VALUES (%s);", (command,))
+                connection.commit()
+
+                cursor.close()
+                connection.close()
+
+                return jsonify({'message': 'Command saved successfully'}), 200
+
+            except psycopg2.Error as error:
+                print("Error executing SQL command:", error)
+                connection.rollback()
+                connection.close()
+                return jsonify({'error': 'Failed to save command'}), 500
+
+        else:
+            return jsonify({'error': 'Failed to connect to database'}), 500
     else:
         return jsonify({'error': 'No command provided'}), 400
-
-@app.route('/get_registration', methods=['GET'])
-def get_registration_command():
-    current_time = int(time.time())
-    cursor.execute('''SELECT * FROM registrations WHERE ? - timestamp <= 300''', (current_time,))
-    registrations = cursor.fetchall()
-
-    if registrations:
-        # Delete the registration commands that are older than 5 minutes
-        cursor.execute('''DELETE FROM registrations WHERE ? - timestamp > 300''', (current_time,))
-        conn.commit()
-        
-        return jsonify(registrations), 200
-    else:
-        return jsonify({'message': 'No recent registration commands'}), 404
 
 if __name__ == '__main__':
     app.run()
