@@ -1,58 +1,35 @@
 from flask import Flask, jsonify, request
 import time
-import threading
 
 app = Flask(__name__)
 
 saved_post = None
-header_received_time = None
-header_expiry_time = None
-is_get_post_open = False
+last_post_time = None
 
-def open_get_post():
-    global header_received_time, header_expiry_time, is_get_post_open
-    header_received_time = time.time()
-    header_expiry_time = header_received_time + 300  # 3 minutes
-    is_get_post_open = True
-
-def close_get_post():
-    global saved_post, header_received_time, header_expiry_time, is_get_post_open
-    saved_post = None
-    header_received_time = None
-    header_expiry_time = None
-    is_get_post_open = False
-
-def start_timer():
-    threading.Timer(180, close_get_post).start()  # Start a timer to close /get_post after 3 minutes
+def save_post():
+    global saved_post, last_post_time
+    saved_post = request.get_json()
+    last_post_time = time.time()  # Record the time of the last POST request
 
 @app.route('/', methods=['POST'])
 def handle_post():
-    global is_get_post_open
-
-    if 'X-Special-Header' in request.headers:
-        open_get_post()  # Open /get_post route
-        start_timer()  # Start the timer to close /get_post after 3 minutes
-        return jsonify({'message': 'Special header received. /get_post is now open for 3 minutes'}), 200
-    else:
-        close_get_post()  # Close /get_post route
-        return jsonify({'error': 'Special header missing. /get_post is closed'}), 403
+    save_post()
+    return jsonify({'message': 'Post saved successfully'}), 200
 
 @app.route('/get_post', methods=['GET'])
 def get_saved_post():
-    global saved_post, header_received_time, header_expiry_time, is_get_post_open
-
-    if not is_get_post_open:
-        return jsonify({'error': 'Access denied to /get_post. It is closed'}), 403
+    global saved_post, last_post_time
 
     if saved_post is None:
         return jsonify({'error': 'No post saved yet'}), 404
 
     current_time = time.time()
-    if header_received_time is not None and current_time <= header_expiry_time:
+    if last_post_time is not None and current_time - last_post_time <= 2:
         return jsonify(saved_post), 200
     else:
-        close_get_post()  # Close /get_post route after 3 minutes
-        return jsonify({'error': 'Access denied to /get_post. It is closed'}), 403
+        old = saved_post
+        saved_post = None
+        return jsonify(old), 200
 
 if __name__ == '__main__':
     app.run()
