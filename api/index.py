@@ -12,7 +12,7 @@ is_get_post_open = False
 def open_get_post():
     global header_received_time, header_expiry_time, is_get_post_open
     header_received_time = time.time()
-    header_expiry_time = header_received_time + 180  # 3 minutes
+    header_expiry_time = header_received_time + 300  # 3 minutes
     is_get_post_open = True
 
 def close_get_post():
