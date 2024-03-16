@@ -1,61 +1,52 @@
-from flask import Flask, jsonify, request
-import os
-import psycopg2
+from flask import Flask, request, jsonify
+import time
 
 app = Flask(__name__)
 
-# Get PostgreSQL connection parameters from environment variables
-postgres_url = os.getenv('POSTGRES_URL')
-postgres_user = os.getenv('POSTGRES_USER')
-postgres_password = os.getenv('POSTGRES_PASSWORD')
-postgres_host = os.getenv('POSTGRES_HOST')
-postgres_database = os.getenv('POSTGRES_DATABASE')
+saved_post = None
+last_post_time = None
+MAX_RETRIES = 3
 
-def connect_to_postgresql():
-    try:
-        connection = psycopg2.connect(
-            user=postgres_user,
-            password=postgres_password,
-            host=postgres_host,
-            port='5432',  # Assuming the default PostgreSQL port
-            database=postgres_database,
-        )
-        return connection
-    except psycopg2.Error as error:
-        print("Error while connecting to PostgreSQL:", error)
-        return None
+def perform_post_save():
+    global saved_post, last_post_time
 
-@app.route('/', methods=['POST'])
-def handle_post():
-    data = request.get_json()
-    command = data.get('command')
-
-    if command:
-        # Connect to PostgreSQL database
-        connection = connect_to_postgresql()
-        if connection:
-            try:
-                cursor = connection.cursor()
-
-                # Example: Execute SQL command
-                cursor.execute("INSERT INTO your_table (command) VALUES (%s);", (command,))
-                connection.commit()
-
-                cursor.close()
-                connection.close()
-
-                return jsonify({'message': 'Command saved successfully'}), 200
-
-            except psycopg2.Error as error:
-                print("Error executing SQL command:", error)
-                connection.rollback()
-                connection.close()
-                return jsonify({'error': 'Failed to save command'}), 500
-
-        else:
-            return jsonify({'error': 'Failed to connect to database'}), 500
+    if saved_post is None:
+        saved_post = request.get_json()
+        last_post_time = time.time()  # Record the time of the last POST request
+        return True
     else:
-        return jsonify({'error': 'No command provided'}), 400
+        raise Exception("Post already saved")
+
+@app.route('/', methods=['GET', 'POST'])
+def handle_post():
+    retries = 0
+
+    while retries < MAX_RETRIES:
+        try:
+            if request.method == 'POST':
+                success = perform_post_save()
+                if success:
+                    return jsonify({'message': 'Post saved successfully'}), 200
+        except Exception as e:
+            print(f"Error occurred: {e}")
+            retries += 1
+            print(f"Retrying... ({retries}/{MAX_RETRIES})")
+            time.sleep(1)  # Wait for 1 second before retrying
+
+    return jsonify({'error': 'Failed to save post'}), 500
+
+@app.route('/get_post', methods=['GET'])
+def get_saved_post():
+    if saved_post is None:
+        return jsonify({'error': 'No post saved yet'}), 404
+
+    current_time = time.time()
+    if last_post_time is not None and current_time - last_post_time <= 2:
+        return jsonify(saved_post), 200
+    else:
+        old = saved_post
+        saved_post = None
+        return jsonify(old), 200
 
 if __name__ == '__main__':
     app.run()
