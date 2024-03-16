@@ -29,7 +29,7 @@ def start_timer():
 def handle_post():
     global is_get_post_open
 
-    if 'Auth' in request.headers:
+    if 'X-Special-Header' in request.headers:
         open_get_post()  # Open /get_post route
         start_timer()  # Start the timer to close /get_post after 3 minutes
         return jsonify({'message': 'Special header received. /get_post is now open for 3 minutes'}), 200
