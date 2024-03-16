@@ -1,42 +1,25 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 import time
 
 app = Flask(__name__)
 
 saved_post = None
 last_post_time = None
-MAX_RETRIES = 3
 
-def perform_post_save():
+def save_post():
     global saved_post, last_post_time
+    saved_post = request.get_json()
+    last_post_time = time.time()  # Record the time of the last POST request
 
-    if saved_post is None:
-        saved_post = request.get_json()
-        last_post_time = time.time()  # Record the time of the last POST request
-        return True
-    else:
-        raise Exception("Post already saved")
-
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['POST'])
 def handle_post():
-    retries = 0
-
-    while retries < MAX_RETRIES:
-        try:
-            if request.method == 'POST':
-                success = perform_post_save()
-                if success:
-                    return jsonify({'message': 'Post saved successfully'}), 200
-        except Exception as e:
-            print(f"Error occurred: {e}")
-            retries += 1
-            print(f"Retrying... ({retries}/{MAX_RETRIES})")
-            time.sleep(1)  # Wait for 1 second before retrying
-
-    return jsonify({'error': 'Failed to save post'}), 500
+    save_post()
+    return jsonify({'message': 'Post saved successfully'}), 200
 
 @app.route('/get_post', methods=['GET'])
 def get_saved_post():
+    global saved_post, last_post_time
+
     if saved_post is None:
         return jsonify({'error': 'No post saved yet'}), 404
 
