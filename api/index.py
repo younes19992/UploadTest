@@ -21,7 +21,7 @@ def get_saved_post():
     global saved_post, last_post_time
 
     if saved_post is None:
-        return jsonify({'None'}), 201
+        return 'None', 201
 
     current_time = time.time()
     if last_post_time is not None and current_time - last_post_time <= 2:
